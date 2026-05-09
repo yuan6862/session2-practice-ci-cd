@@ -1,0 +1,44 @@
+name: Train and Release Model
+
+# 自动化触发逻辑：只有当代码推送到 main 分支，且训练数据有变动时才运行
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'training_data.csv'
+
+jobs:
+  train-and-release:
+    runs-on: ubuntu-latest
+
+    # 关键权限：允许 Action 往你的仓库里发布 Release
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install pandas scikit-learn
+
+    # 运行训练大脑
+    - name: Train Model
+      run: python train_model.py
+
+    # 自动化逻辑：将生成的模型文件发布到 Release 页面
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: linear_model.txt
+        tag_name: v${{ github.run_number }}
+        name: Model Update v${{ github.run_number }}
+        body: "New model version trained automatically from latest data."
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
